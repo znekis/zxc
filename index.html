@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebInspector — Анализатор сайтов</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* ----- БАЗА ----- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-body: #f0f4f9;
+            --bg-card: #ffffff;
+            --bg-input: #ffffff;
+            --bg-header: #ffffff;
+            --text-primary: #0b1b33;
+            --text-secondary: #4a5a72;
+            --text-muted: #8899b0;
+            --border: #e2e8f0;
+            --shadow-card: 0 12px 40px rgba(0, 20, 50, 0.08);
+            --shadow-hover: 0 20px 60px rgba(0, 20, 50, 0.16);
+            --radius-card: 20px;
+            --radius-input: 60px;
+            --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+            --blue: #2463eb;
+            --blue-dark: #1a4fc4;
+            --blue-light: #e8effd;
+            --purple: #7c3aed;
+            --green: #0f973d;
+            --green-light: #e6f7ed;
+            --orange: #e67e22;
+            --orange-light: #fef3e8;
+            --red: #dc2626;
+            --red-light: #fde8e8;
+            --teal: #0d9488;
+            --teal-light: #e6f7f5;
+
+            --gradient-brand: linear-gradient(135deg, #2463eb, #7c3aed);
+            --gradient-hero: linear-gradient(135deg, #0b1b33 0%, #1a365d 100%);
+        }
+
+        body.dark {
+            --bg-body: #0b1424;
+            --bg-card: #141f33;
+            --bg-input: #0b1424;
+            --bg-header: #0f1a2e;
+            --text-primary: #e8edf5;
+            --text-secondary: #9aacc9;
+            --text-muted: #5a6f8a;
+            --border: #1e2d47;
+            --shadow-card: 0 12px 40px rgba(0, 0, 0, 0.4);
+            --shadow-hover: 0 20px 60px rgba(0, 0, 0, 0.6);
+            --blue-light: #1a2d4a;
+            --green-light: #0d2a1a;
+            --orange-light: #2a1d0d;
+            --red-light: #2a1212;
+            --teal-light: #0d2220;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-body);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 0;
+            transition: background 0.35s, color 0.35s;
+        }
+
+        /* ----- ОБЁРТКА ----- */
+        .app-container {
+            max-width: 1240px;
+            margin: 0 auto;
+            padding: 24px 28px 40px;
+        }
+
+        /* ----- ШАПКА (узнаваемый бренд) ----- */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 28px;
+            padding: 12px 24px;
+            background: var(--bg-header);
+            border-radius: 18px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+            border: 1px solid var(--border);
+            transition: background 0.35s, border 0.35s;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .brand-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            background: var(--gradient-brand);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            box-shadow: 0 6px 18px rgba(36, 99, 235, 0.3);
+            transition: transform 0.3s;
+        }
+        .brand-icon:hover {
+            transform: rotate(-8deg) scale(1.05);
+        }
+
+        .brand-name {
+            font-weight: 800;
+            font-size: 1.7rem;
+            letter-spacing: -0.03em;
+        }
+        .brand-name span {
+            background: var(--gradient-brand);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .brand-tagline {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+            margin-top: 2px;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-actions .badge-version {
+            background: var(--blue-light);
+            color: var(--blue);
+            padding: 4px 14px;
+            border-radius: 40px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            border: 1px solid var(--border);
+        }
+        .dark .header-actions .badge-version {
+            background: #1a2d4a;
+            color: #60a5fa;
+        }
+
+        .theme-toggle {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 40px;
+            padding: 10px 18px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: var(--transition);
+            color: var(--text-primary);
+        }
+        .theme-toggle:hover {
+            transform: scale(1.03);
+            box-shadow: var(--shadow-card);
+        }
+
+        /* ----- ГЕРОЙ (ввод) ----- */
+        .hero-section {
+            background: var(--bg-card);
+            border-radius: var(--radius-card);
+            padding: 32px 36px;
+            box-shadow: var(--shadow-card);
+            border: 1px solid var(--border);
+            margin-bottom: 32px;
+            transition: background 0.35s, border 0.35s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: -60%;
+            right: -10%;
+            width: 300px;
+            height: 300px;
+            background: var(--gradient-brand);
+            opacity: 0.04;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .hero-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .hero-title i {
+            color: var(--blue);
+            font-size: 1.3rem;
+        }
+        .hero-sub {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 18px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .input-group .input-wrap {
+            flex: 1 1 300px;
+            position: relative;
+        }
+
+        .input-group .input-wrap i {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 1rem;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 16px 20px 16px 50px;
+            border: 2px solid var(--border);
+            border-radius: var(--radius-input);
+            font-size: 1rem;
+            background: var(--bg-input);
+            color: var(--text-primary);
+            outline: none;
+            transition: var(--transition);
+            font-weight: 500;
+            font-family: 'Inter', sans-serif;
+        }
+        .input-group input:focus {
+            border-color: var(--blue);
+            box-shadow: 0 0 0 4px rgba(36, 99, 235, 0.12);
+        }
+        .dark .input-group input:focus {
+            box-shadow: 0 0 0 4px rgba(36, 99, 235, 0.2);
+        }
+
+        .input-group .btn-primary {
+            padding: 16px 40px;
+            border: none;
+            border-radius: var(--radius-input);
+            background: var(--gradient-brand);
+            color: white;
+            font-weight: 700;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: var(--transition);
+            box-shadow: 0 6px 20px rgba(36, 99, 235, 0.3);
+            font-family: 'Inter', sans-serif;
+            white-space: nowrap;
+        }
+        .input-group .btn-primary:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 32px rgba(36, 99, 235, 0.4);
+        }
+        .input-group .btn-primary:disabled {
+            opacity: 0.6;
+            transform: none;
+            cursor: not-allowed;
+        }
+
+        .input-group .btn-secondary {
+            padding: 16px 24px;
+            border: 2px solid var(--border);
+            border-radius: var(--radius-input);
+            background: transparent;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'Inter', sans-serif;
+            white-space: nowrap;
+        }
+        .input-group .btn-secondary:hover {
+            background: var(--red-light);
+            border-color: var(--red);
+            color: var(--red);
+        }
+
+        /* ----- СПИННЕР (кастомный) ----- */
+        .spinner-container {
+            display: none;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            padding: 30px 0 10px;
+        }
+        .spinner-container.active {
+            display: flex;
+        }
+
+        .spinner-ring {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            border: 5px solid var(--border);
+            border-top: 5px solid var(--blue);
+            animation: spin 0.9s cubic-bezier(0.6, 0, 0.4, 1) infinite;
+            box-shadow: 0 0 20px rgba(36, 99, 235, 0.1);
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .spinner-label {
+            font-weight: 500;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+        .spinner-label i {
+            color: var(--blue);
+            margin-right: 6px;
+        }
+
+        /* ----- РЕЗУЛЬТАТЫ (узнаваемые карточки) ----- */
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 24px;
+            margin: 28px 0 36px;
+        }
+
+        .result-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-card);
+            padding: 24px 26px 26px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-card);
+            transition: var(--transition);
+            opacity: 0;
+            transform: translateY(20px);
+            animation: cardIn 0.5s forwards;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .result-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            border-radius: 0 4px 4px 0;
+        }
+
+        .result-card:hover {
+            transform: translateY(-6px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        @keyframes cardIn {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Цветовые акценты через псевдоэлемент */
+        .card-critical::after { background: var(--red); }
+        .card-warning::after { background: var(--orange); }
+        .card-success::after { background: var(--green); }
+        .card-stats::after { background: var(--blue); }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 14px;
+            font-weight: 700;
+            font-size: 1.15rem;
+        }
+
+        .card-header .card-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+        .card-critical .card-icon { background: var(--red-light); color: var(--red); }
+        .card-warning .card-icon { background: var(--orange-light); color: var(--orange); }
+        .card-success .card-icon { background: var(--green-light); color: var(--green); }
+        .card-stats .card-icon { background: var(--blue-light); color: var(--blue); }
+
+        .dark .card-critical .card-icon { background: #2a1212; }
+        .dark .card-warning .card-icon { background: #2a1d0d; }
+        .dark .card-success .card-icon { background: #0d2a1a; }
+        .dark .card-stats .card-icon { background: #1a2d4a; }
+
+        .card-badge {
+            margin-left: auto;
+            background: var(--bg-body);
+            padding: 2px 14px;
+            border-radius: 40px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+        }
+
+        .card-body ul {
+            list-style: none;
+            padding: 0;
+        }
+        .card-body li {
+            padding: 8px 0 8px 28px;
+            position: relative;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.92rem;
+            line-height: 1.5;
+        }
+        .card-body li:last-child {
+            border-bottom: none;
+        }
+        .card-body li::before {
+            content: '▹';
+            position: absolute;
+            left: 4px;
+            color: var(--blue);
+            font-weight: 700;
+        }
+        .card-body li .item-title {
+            font-weight: 600;
+        }
+        .card-body li .item-desc {
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        .detail-toggle {
+            margin-top: 14px;
+            background: transparent;
+            border: none;
+            color: var(--blue);
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 0;
+            transition: var(--transition);
+            font-family: 'Inter', sans-serif;
+        }
+        .detail-toggle:hover {
+            color: var(--purple);
+            gap: 10px;
+        }
+
+        .detail-panel {
+            margin-top: 12px;
+            padding: 16px 20px;
+            background: var(--bg-body);
+            border-radius: 14px;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            display: none;
+            border-left: 3px solid var(--blue);
+        }
+        .dark .detail-panel {
+            background: #0b1424;
+        }
+        .detail-panel.open {
+            display: block;
+            animation: fadeIn 0.25s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .detail-panel i {
+            color: var(--blue);
+            margin-right: 8px;
+        }
+
+        /* Стиль для статистики — более плотный */
+        .card-stats .card-body li {
+            padding: 6px 0 6px 28px;
+            font-size: 0.9rem;
+        }
+        .card-stats .card-body li .stat-value {
+            font-weight: 700;
+            color: var(--blue);
+            margin-left: 6px;
+        }
+
+        /* ----- ИСТОРИЯ (узнаваемая) ----- */
+        .history-section {
+            background: var(--bg-card);
+            border-radius: var(--radius-card);
+            padding: 24px 28px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-card);
+            margin-top: 12px;
+            transition: background 0.35s;
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .history-header h3 {
+            font-weight: 700;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .history-header h3 i {
+            color: var(--blue);
+        }
+
+        .history-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            max-height: 180px;
+            overflow-y: auto;
+            padding: 4px 2px;
+        }
+        .history-list::-webkit-scrollbar {
+            width: 5px;
+        }
+        .history-list::-webkit-scrollbar-track {
+            background: var(--bg-body);
+            border-radius: 10px;
+        }
+        .history-list::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 10px;
+        }
+
+        .history-item {
+            background: var(--bg-body);
+            border: 1px solid var(--border);
+            border-radius: 60px;
+            padding: 8px 18px 8px 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: var(--transition);
+            white-space: nowrap;
+        }
+        .history-item:hover {
+            border-color: var(--blue);
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-card);
+        }
+
+        .history-item .h-url {
+            max-width: 160px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-weight: 500;
+        }
+        .history-item .h-badge {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+            font-size: 0.7rem;
+        }
+        .history-item .h-badge span {
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+            padding: 0 6px;
+            border-radius: 40px;
+            font-weight: 600;
+        }
+        .history-item .h-badge .badge-error { color: var(--red); }
+        .history-item .h-badge .badge-warn { color: var(--orange); }
+        .history-item .h-badge .badge-ok { color: var(--green); }
+        .history-item .h-time {
+            color: var(--text-muted);
+            font-size: 0.7rem;
+        }
+
+        .history-empty {
+            color: var(--text-muted);
+            font-style: italic;
+            padding: 12px 0;
+            font-size: 0.9rem;
+        }
+
+        /* ----- FOOTER / ИНСТРУКЦИЯ ----- */
+        .footer-tips {
+            margin-top: 32px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 12px 28px;
+            padding: 16px 24px;
+            background: var(--bg-card);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+        .footer-tips i {
+            color: var(--blue);
+            font-size: 1.2rem;
+        }
+        .footer-tips .tip {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .footer-tips .tip .num {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 22px;
+            height: 22px;
+            background: var(--blue-light);
+            color: var(--blue);
+            border-radius: 50%;
+            font-size: 0.7rem;
+            font-weight: 700;
+        }
+        .dark .footer-tips .tip .num {
+            background: #1a2d4a;
+            color: #60a5fa;
+        }
+
+        /* ----- АДАПТИВ ----- */
+        @media (max-width: 860px) {
+            .app-container { padding: 16px; }
+            .header { padding: 12px 16px; }
+            .brand-name { font-size: 1.3rem; }
+            .hero-section { padding: 24px; }
+            .results-grid { grid-template-columns: 1fr; }
+            .input-group .btn-primary { width: 100%; justify-content: center; }
+            .input-group .btn-secondary { width: 100%; justify-content: center; }
+            .history-item { white-space: normal; flex-wrap: wrap; }
+        }
+
+        @media (max-width: 480px) {
+            .brand-icon { width: 40px; height: 40px; font-size: 1.2rem; }
+            .brand-name { font-size: 1.1rem; }
+            .brand-tagline { display: none; }
+            .header-actions .badge-version { display: none; }
+            .hero-title { font-size: 0.95rem; }
+            .input-group input { padding: 14px 16px 14px 44px; font-size: 0.9rem; }
+            .result-card { padding: 18px; }
+        }
+
+        /* ----- УТИЛИТЫ ----- */
+        .flex { display: flex; align-items: center; gap: 8px; }
+        .gap-4 { gap: 4px; }
+        .mt-8 { margin-top: 8px; }
+        .mb-8 { margin-bottom: 8px; }
+        .text-muted { color: var(--text-muted); }
+        .text-center { text-align: center; }
+
+        /* ----- ПЕЧАТЬ ----- */
+        @media print {
+            body { background: white; }
+            .app-container { padding: 20px; }
+            .header, .hero-section, .history-section, .footer-tips,
+            .theme-toggle, .btn-secondary, .spinner-container {
+                display: none !important;
+            }
+            .results-grid { display: block; }
+            .result-card {
+                break-inside: avoid;
+                page-break-inside: avoid;
+                box-shadow: none;
+                border: 1px solid #ddd;
+                margin-bottom: 16px;
+            }
+            .result-card:hover { transform: none !important; }
+            .detail-panel { display: block !important; }
+        }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <!-- ШАПКА -->
+    <header class="header">
+        <div class="brand">
+            <div class="brand-icon"><i class="fas fa-eye"></i></div>
+            <div>
+                <div class="brand-name">Web<span>Inspector</span></div>
+                <div class="brand-tagline">Аудит сайтов · SEO · Структура</div>
+            </div>
+        </div>
+        <div class="header-actions">
+            <span class="badge-version"><i class="fas fa-code-branch"></i> v2.0</span>
+            <button class="theme-toggle" id="themeToggle">
+                <i class="fas fa-moon"></i> <span>Тема</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- ГЕРОЙ / ВВОД -->
+    <section class="hero-section">
+        <div class="hero-title">
+            <i class="fas fa-arrow-right"></i> Введите URL для аудита
+        </div>
+        <div class="hero-sub">
+            Получите детальный отчёт по SEO, структуре и производительности
+        </div>
+        <div class="input-group">
+            <div class="input-wrap">
+                <i class="fas fa-link"></i>
+                <input type="text" id="urlInput" placeholder="example.com" value="https://example.com">
+            </div>
+            <button class="btn-primary" id="analyzeBtn">
+                <i class="fas fa-rocket"></i> Анализировать
+            </button>
+            <button class="btn-secondary" id="clearHistoryBtn">
+                <i class="fas fa-trash-alt"></i> Очистить историю
+            </button>
+        </div>
+
+        <!-- Спиннер -->
+        <div class="spinner-container" id="spinnerContainer">
+            <div class="spinner-ring"></div>
+            <div class="spinner-label">
+                <i class="fas fa-search"></i> Анализируем сайт...
+            </div>
+        </div>
+    </section>
+
+    <!-- РЕЗУЛЬТАТЫ -->
+    <div id="resultsContainer">
+        <div class="results-grid" style="display:block;">
+            <div class="result-card card-stats" style="grid-column:1/-1; text-align:center; padding:40px 20px;">
+                <div style="font-size:3.2rem; margin-bottom:12px; opacity:0.5;">🔍</div>
+                <h3 style="font-weight:700; font-size:1.2rem;">Готов к аудиту</h3>
+                <p class="text-muted" style="margin-top:6px;">Введите URL и нажмите «Анализировать»</p>
+                <div style="margin-top:14px; display:flex; justify-content:center; gap:12px; flex-wrap:wrap; font-size:0.8rem; color:var(--text-muted);">
+                    <span><i class="fas fa-check-circle" style="color:var(--green);"></i> SEO-проверка</span>
+                    <span><i class="fas fa-check-circle" style="color:var(--green);"></i> Структура</span>
+                    <span><i class="fas fa-check-circle" style="color:var(--green);"></i> Безопасность</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ИСТОРИЯ -->
+    <section class="history-section">
+        <div class="history-header">
+            <h3><i class="fas fa-clock-rotate-left"></i> История проверок</h3>
+            <span style="font-size:0.8rem; color:var(--text-muted);">
+                <i class="fas fa-mouse-pointer"></i> кликните для загрузки
+            </span>
+        </div>
+        <div class="history-list" id="historyList"></div>
+    </section>
+
+    <!-- ПОДСКАЗКИ -->
+    <div class="footer-tips">
+        <i class="fas fa-lightbulb"></i>
+        <span class="tip"><span class="num">1</span> Введите URL</span>
+        <span class="tip"><span class="num">2</span> Нажмите «Анализировать»</span>
+        <span class="tip"><span class="num">3</span> Получите отчёт</span>
+        <span style="margin-left:auto; opacity:0.6; font-size:0.8rem;">
+            <i class="fas fa-shield-alt"></i> iframe + прокси
+        </span>
+    </div>
+</div>
+
+<script>
+    (function() {
+        "use strict";
+
+        // ---- DOM ----
+        const urlInput = document.getElementById('urlInput');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const spinner = document.getElementById('spinnerContainer');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const historyList = document.getElementById('historyList');
+        const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+        const themeToggle = document.getElementById('themeToggle');
+
+        // ---- ТЕМА ----
+        let darkMode = localStorage.getItem('webinspector-theme') === 'dark';
+        if (darkMode) document.body.classList.add('dark');
+        themeToggle.innerHTML = darkMode
+            ? '<i class="fas fa-sun"></i> <span>Светлая</span>'
+            : '<i class="fas fa-moon"></i> <span>Тёмная</span>';
+
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark');
+            darkMode = document.body.classList.contains('dark');
+            localStorage.setItem('webinspector-theme', darkMode ? 'dark' : 'light');
+            themeToggle.innerHTML = darkMode
+                ? '<i class="fas fa-sun"></i> <span>Светлая</span>'
+                : '<i class="fas fa-moon"></i> <span>Тёмная</span>';
+        });
+
+        // ---- ВСПОМОГАТЕЛЬНЫЕ ----
+        function normalizeUrl(url) {
+            url = url.trim();
+            if (!url) return null;
+            if (!/^https?:\/\//i.test(url)) {
+                url = 'https://' + url;
+            }
+            try {
+                const parsed = new URL(url);
+                return parsed.href;
+            } catch (_) {
+                return null;
+            }
+        }
+
+        // ---- АНАЛИЗ (iframe + proxy fallback) ----
+        function analyzeSite(url) {
+            return new Promise((resolve) => {
+                const iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.src = url;
+                document.body.appendChild(iframe);
+
+                let loaded = false;
+                const timeout = setTimeout(() => {
+                    if (!loaded) {
+                        document.body.removeChild(iframe);
+                        fetchViaProxy(url).then(data => resolve(data));
+                    }
+                }, 5000);
+
+                iframe.addEventListener('load', function() {
+                    loaded = true;
+                    clearTimeout(timeout);
+                    try {
+                        const doc = iframe.contentDocument || iframe.contentWindow?.document;
+                        if (!doc) throw new Error('Нет доступа');
+                        const result = collectMetrics(doc, url);
+                        document.body.removeChild(iframe);
+                        resolve(result);
+                    } catch (_) {
+                        document.body.removeChild(iframe);
+                        fetchViaProxy(url).then(data => resolve(data));
+                    }
+                });
+
+                iframe.addEventListener('error', function() {
+                    clearTimeout(timeout);
+                    document.body.removeChild(iframe);
+                    fetchViaProxy(url).then(data => resolve(data));
+                });
+            });
+        }
+
+        function fetchViaProxy(url) {
+            return fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`)
+                .then(res => {
+                    if (!res.ok) throw new Error('Прокси не ответил');
+                    return res.text();
+                })
+                .then(html => {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    return collectMetrics(doc, url);
+                })
+                .catch(() => ({
+                    title: 'Не удалось загрузить',
+                    url: url,
+                    metaDescription: null,
+                    h1: 0, h2: 0, h3: 0,
+                    images: 0,
+                    links: 0,
+                    ssl: url.startsWith('https://'),
+                    viewport: false,
+                    loadTime: '—',
+                    error: true
+                }));
+        }
+
+        function collectMetrics(doc, url) {
+            const title = doc.querySelector('title')?.textContent?.trim() || null;
+            const metaDesc = doc.querySelector('meta[name="description"]')?.getAttribute('content') || null;
+            const h1 = doc.querySelectorAll('h1').length;
+            const h2 = doc.querySelectorAll('h2').length;
+            const h3 = doc.querySelectorAll('h3').length;
+            const images = doc.querySelectorAll('img').length;
+            const links = doc.querySelectorAll('a').length;
+            const viewport = !!doc.querySelector('meta[name="viewport"]');
+            const ssl = url.startsWith('https://');
+            let loadTime = '—';
+            if (window.performance && performance.timing) {
+                const t = performance.timing;
+                if (t.responseEnd && t.navigationStart) {
+                    const ms = t.responseEnd - t.navigationStart;
+                    loadTime = (ms / 1000).toFixed(1) + 'с';
+                }
+            }
+            return { title, url, metaDescription, h1, h2, h3, images, links, ssl, viewport, loadTime, error: false };
+        }
+
+        // ---- ГЕНЕРАЦИЯ ОТЧЁТА ----
+        function generateReport(metrics) {
+            const items = [];
+
+            // Critical
+            if (!metrics.title) items.push({ category: 'critical', icon: 'fa-circle-exclamation', title: 'Отсутствует <title>', desc: 'Добавьте уникальный заголовок в <head> для SEO.' });
+            if (!metrics.metaDescription) items.push({ category: 'critical', icon: 'fa-circle-exclamation', title: 'Нет meta-description', desc: 'Мета-описание повышает кликабельность в выдаче.' });
+            if (!metrics.ssl) items.push({ category: 'critical', icon: 'fa-lock', title: 'Сайт по HTTP (небезопасно)', desc: 'Перейдите на HTTPS для защиты данных.' });
+
+            // Warnings
+            if (metrics.h1 === 0) items.push({ category: 'warning', icon: 'fa-triangle-exclamation', title: 'Нет заголовка h1', desc: 'Добавьте один h1 — главный заголовок страницы.' });
+            if (metrics.h1 + metrics.h2 + metrics.h3 < 3) items.push({ category: 'warning', icon: 'fa-heading', title: 'Мало заголовков', desc: 'Используйте больше h2/h3 для структуры.' });
+            if (metrics.links > 50) items.push({ category: 'warning', icon: 'fa-link', title: 'Много ссылок', desc: 'Проверьте качество ссылок, более 50 может перегружать.' });
+            if (!metrics.viewport) items.push({ category: 'warning', icon: 'fa-mobile-screen-button', title: 'Нет viewport', desc: 'Добавьте <meta name="viewport"> для мобильной адаптации.' });
+
+            // Success
+            if (metrics.title) items.push({ category: 'success', icon: 'fa-circle-check', title: 'Есть title', desc: `"${metrics.title.length > 40 ? metrics.title.slice(0, 40) + '…' : metrics.title}"` });
+            if (metrics.metaDescription) items.push({ category: 'success', icon: 'fa-circle-check', title: 'Есть meta-description', desc: 'Описание присутствует, это помогает SEO.' });
+            if (metrics.ssl) items.push({ category: 'success', icon: 'fa-shield', title: 'SSL сертификат', desc: 'Сайт защищён, данные шифруются.' });
+            if (metrics.viewport) items.push({ category: 'success', icon: 'fa-circle-check', title: 'Адаптивность', desc: 'viewport задан, мобильные устройства поддерживаются.' });
+            if (metrics.loadTime !== '—' && parseFloat(metrics.loadTime) < 1.5) {
+                items.push({ category: 'success', icon: 'fa-bolt', title: 'Быстрая загрузка', desc: `Время загрузки ${metrics.loadTime} — отлично!` });
+            }
+
+            // Stats — отдельно
+            const stats = {
+                category: 'stats',
+                icon: 'fa-chart-simple',
+                title: 'Статистика сайта',
+                desc: `h1: ${metrics.h1} · h2: ${metrics.h2} · h3: ${metrics.h3} · Изображения: ${metrics.images} · Ссылки: ${metrics.links}`,
+                extra: `SSL: ${metrics.ssl ? '✅ Да' : '❌ Нет'} · Адаптивность: ${metrics.viewport ? '✅ Да' : '❌ Нет'} · Загрузка: ${metrics.loadTime}`
+            };
+
+            return { items, stats };
+        }
+
+        // ---- ОТРИСОВКА ----
+        function renderReport(metrics) {
+            const { items, stats } = generateReport(metrics);
+
+            const groups = {
+                critical: { label: 'Ошибки (Critical)', icon: 'fa-bug', cls: 'card-critical', list: [] },
+                warning: { label: 'Предупреждения (Warnings)', icon: 'fa-triangle-exclamation', cls: 'card-warning', list: [] },
+                success: { label: 'Успехи (Success)', icon: 'fa-circle-check', cls: 'card-success', list: [] },
+                stats: { label: 'Статистика (Stats)', icon: 'fa-chart-simple', cls: 'card-stats', list: [stats] }
+            };
+
+            items.forEach(item => {
+                if (groups[item.category]) {
+                    groups[item.category].list.push(item);
+                }
+            });
+
+            let html = '<div class="results-grid">';
+
+            for (const [key, group] of Object.entries(groups)) {
+                if (group.list.length === 0) continue;
+                const delay = Object.keys(groups).indexOf(key) * 0.08;
+                html += `<div class="result-card ${group.cls}" style="animation-delay:${delay}s">`;
+                html += `<div class="card-header">
+                            <div class="card-icon"><i class="fas ${group.icon}"></i></div>
+                            ${group.label}
+                            <span class="card-badge">${group.list.length}</span>
+                        </div>`;
+                html += `<div class="card-body"><ul>`;
+
+                group.list.forEach((item, idx) => {
+                    const hasDetail = item.extra || item.desc;
+                    const detailId = `detail-${key}-${idx}`;
+                    html += `<li>
+                                <span class="item-title">${item.title}</span>
+                                <span class="item-desc"> — ${item.desc}</span>
+                                ${item.extra ? `<br><span style="font-size:0.85rem;color:var(--text-muted);">${item.extra}</span>` : ''}
+                                ${hasDetail ? `
+                                    <div style="margin-top:4px;">
+                                        <button class="detail-toggle" data-target="${detailId}">
+                                            <i class="fas fa-chevron-down"></i> Подробнее
+                                        </button>
+                                        <div class="detail-panel" id="${detailId}">
+                                            <i class="fas fa-lightbulb"></i> 
+                                            ${item.extra || item.desc}
+                                            ${key === 'stats' ? `<br><span style="color:var(--text-muted);font-size:0.85rem;">Данные собраны из доступного HTML-кода.</span>` : ''}
+                                        </div>
+                                    </div>
+                                ` : ''}
+                            </li>`;
+                });
+
+                html += `</ul></div></div>`;
+            }
+
+            html += '</div>';
+            resultsContainer.innerHTML = html;
+
+            // Обработчики для "Подробнее"
+            document.querySelectorAll('.detail-toggle').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const targetId = this.dataset.target;
+                    const panel = document.getElementById(targetId);
+                    if (panel) {
+                        panel.classList.toggle('open');
+                        const icon = this.querySelector('i');
+                        if (panel.classList.contains('open')) {
+                            icon.className = 'fas fa-chevron-up';
+                        } else {
+                            icon.className = 'fas fa-chevron-down';
+                        }
+                    }
+                });
+            });
+        }
+
+        // ---- ИСТОРИЯ (localStorage) ----
+        function getHistory() {
+            try { return JSON.parse(localStorage.getItem('webinspector-history')) || []; }
+            catch { return []; }
+        }
+
+        function saveHistoryEntry(entry) {
+            const history = getHistory();
+            history.unshift(entry);
+            if (history.length > 30) history.pop();
+            localStorage.setItem('webinspector-history', JSON.stringify(history));
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const history = getHistory();
+            if (history.length === 0) {
+                historyList.innerHTML = '<div class="history-empty">История пуста</div>';
+                return;
+            }
+            let html = '';
+            history.forEach((item, index) => {
+                const date = new Date(item.timestamp).toLocaleString('ru-RU', { hour12: false });
+                const e = item.errors || 0;
+                const w = item.warnings || 0;
+                const s = item.success || 0;
+                html += `<div class="history-item" data-index="${index}">
+                            <span class="h-url">${item.url}</span>
+                            <span class="h-badge">
+                                <span class="badge-error"><i class="fas fa-circle"></i> ${e}</span>
+                                <span class="badge-warn"><i class="fas fa-circle"></i> ${w}</span>
+                                <span class="badge-ok"><i class="fas fa-circle"></i> ${s}</span>
+                            </span>
+                            <span class="h-time">${date}</span>
+                        </div>`;
+            });
+            historyList.innerHTML = html;
+
+            document.querySelectorAll('.history-item').forEach(el => {
+                el.addEventListener('click', function() {
+                    const idx = parseInt(this.dataset.index);
+                    const history = getHistory();
+                    const entry = history[idx];
+                    if (entry && entry.report) {
+                        renderReport(entry.report);
+                        urlInput.value = entry.url;
+                        // прокрутка к результатам
+                        document.querySelector('.hero-section')?.scrollIntoView({ behavior: 'smooth' });
+                    }
+                });
+            });
+        }
+
+        // ---- ОСНОВНАЯ ЛОГИКА ----
+        async function performAnalysis() {
+            const raw = urlInput.value.trim();
+            if (!raw) {
+                resultsContainer.innerHTML = `<div class="results-grid"><div class="result-card card-critical"><div class="card-header"><div class="card-icon"><i class="fas fa-circle-exclamation"></i></div>Ошибка</div><div class="card-body"><p>Введите URL для анализа.</p></div></div></div>`;
+                return;
+            }
+            const url = normalizeUrl(raw);
+            if (!url) {
+                resultsContainer.innerHTML = `<div class="results-grid"><div class="result-card card-critical"><div class="card-header"><div class="card-icon"><i class="fas fa-circle-exclamation"></i></div>Неверный формат</div><div class="card-body"><p>Проверьте URL, например: example.com</p></div></div></div>`;
+                return;
+            }
+            urlInput.value = url;
+
+            spinner.classList.add('active');
+            analyzeBtn.disabled = true;
+
+            try {
+                const metrics = await analyzeSite(url);
+                const { items } = generateReport(metrics);
+                const errors = items.filter(i => i.category === 'critical').length;
+                const warnings = items.filter(i => i.category === 'warning').length;
+                const success = items.filter(i => i.category === 'success').length;
+
+                saveHistoryEntry({
+                    url: metrics.url || url,
+                    timestamp: Date.now(),
+                    errors,
+                    warnings,
+                    success,
+                    report: metrics
+                });
+
+                renderReport(metrics);
+            } catch (err) {
+                resultsContainer.innerHTML = `<div class="results-grid"><div class="result-card card-critical"><div class="card-header"><div class="card-icon"><i class="fas fa-bug"></i></div>Ошибка</div><div class="card-body"><p>${err.message || 'Не удалось проанализировать сайт.'}</p></div></div></div>`;
+            } finally {
+                spinner.classList.remove('active');
+                analyzeBtn.disabled = false;
+            }
+        }
+
+        // ---- ОЧИСТКА ИСТОРИИ ----
+        clearHistoryBtn.addEventListener('click', function() {
+            if (historyList.children.length === 0 || historyList.querySelector('.history-empty')) return;
+            if (confirm('Очистить всю историю?')) {
+                localStorage.removeItem('webinspector-history');
+                renderHistory();
+            }
+        });
+
+        // ---- СОБЫТИЯ ----
+        analyzeBtn.addEventListener('click', performAnalysis);
+        urlInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') performAnalysis(); });
+
+        // ---- СТАРТ ----
+        renderHistory();
+
+        console.log('🔍 WebInspector v2.0 — узнаваемый дизайн, профессиональный аудит.');
+        console.log('📌 Использует iframe + прокси allorigins.win для обхода CORS.');
+
+        /*
+         * ПРИМЕЧАНИЯ ПО РАЗРАБОТКЕ:
+         * 1. Анализ: iframe с fallback на прокси allorigins.win.
+         * 2. Дизайн: узнаваемый, профессиональный, с градиентами и акцентами.
+         *    — Карточки с цветовой индикацией слева (псевдоэлемент).
+         *    — Иконки в цветных кругах.
+         *    — Брендированный хедер с градиентным лого.
+         *    — Тёмная/светлая тема с плавными переходами.
+         * 3. Анимации: stagger-эффект, hover-подъём, плавные раскрытия.
+         * 4. История: localStorage с восстановлением отчётов по клику.
+         * 5. Код: ванильный JS, без библиотек, адаптивный.
+         */
+    })();
+</script>
+</body>
+</html>
